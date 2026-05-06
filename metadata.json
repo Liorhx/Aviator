@@ -1,0 +1,6 @@
+{
+  "name": "Aviator: High-Stakes Multiplier",
+  "description": "A real-time multiplayer crash game with high stakes, live leaderboards, and provably fair mechanics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["real-time-communications"]
+}

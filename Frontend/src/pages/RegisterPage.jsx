@@ -14,8 +14,53 @@ export default function RegisterPage() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
+    setError("");
+
+    // Username validation
+    if (username.trim().length < 3) {
+      return setError("Username must be at least 3 characters");
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return setError("Please enter a valid email");
+    }
+
+    // Password validation
+    if (password.length < 8) {
+      return setError("Password must be at least 8 characters long");
+    }
+
+    // Must contain uppercase letter
+    if (!/[A-Z]/.test(password)) {
+      return setError("Password must contain at least one uppercase letter");
+    }
+
+    // Must contain lowercase letter
+    if (!/[a-z]/.test(password)) {
+      return setError("Password must contain at least one lowercase letter");
+    }
+
+    // Must contain number
+    if (!/[0-9]/.test(password)) {
+      return setError("Password must contain at least one number");
+    }
+
+    // Must contain special character
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return setError("Password must contain at least one special character");
+    }
+
     try {
-      const res = await authApi.register({ username, email, password });
+      const res = await authApi.register({
+        username,
+        email,
+        password,
+      });
+
       dispatch(setAuth(res.data));
       navigate("/");
     } catch (err) {

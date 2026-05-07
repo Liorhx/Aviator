@@ -1,105 +1,130 @@
-# Aviator: Real-Time Multiplayer Crash Game
+Aviator Game 🎮
 
-A high-performance, real-time multiplayer game built with the MERN stack (MySQL, Express, React, Node.js + Socket.IO).
+A real-time multiplayer Aviator game built using Node.js, React, Socket.IO, MongoDB, Docker, and AWS EC2.
 
-## 🔥 Features
+Players place bets before the round starts, watch the multiplier increase in real time, and cash out before the crash occurs. All players see the same multiplier simultaneously through WebSocket synchronization.
 
-- **Real-time Synchronization**: All players see the exact same multiplier tick and crash event.
-- **Provably Fair**: Crash points are generated using HMAC-SHA256 with a transparent seeding system.
-- **Wallet System**: Automatic balance deduction and profit addition on cashout.
-- **Live Leaderboard**: Real-time updates showing bets and cashouts from other players.
-- **History Tracking**: Last 10 round results with color-coding based on multiplier magnitude.
-- **Responsive UI**: Optimized for desktop and mobile with sleek animations.
+🚀 Live Demo
+http://18.234.23.109:3000
+📂 GitHub Repository
+https://github.com/Liorhx/aviotor
+🛠️ Tech Stack
+Frontend
+React.js
+Vite
+Socket.IO Client
+CSS / Tailwind
+Backend
+Node.js
+Express.js
+Socket.IO
+JWT Authentication
+Database
+MongoDB Atlas
+Mongoose
+DevOps & Deployment
+Docker
+Docker Compose
+AWS EC2 (Ubuntu)
+✨ Features
+🎮 Game Features
+Real-time Aviator gameplay
+Live multiplier updates
+Random crash logic
+Bet placement system
+Cash out functionality
+Wallet balance management
+Round history tracking
+Live player bets panel
+🔐 Authentication
+JWT-based login/register
+Protected routes
+Authenticated socket connections
+⚡ Real-Time Communication
+WebSocket synchronization using Socket.IO
+Same multiplier visible to all connected players
+Instant crash & cashout events
+☁️ Deployment
+Dockerized full-stack application
+Hosted on AWS EC2
+MongoDB Atlas cloud database
+🧠 Game Flow
+WAITING → FLYING → CRASHED
+Players place bets during WAITING phase
+Round starts at 1.00x
+Multiplier continuously increases
+Players must cash out before crash
+Server crashes at random multiplier
+New round begins
+📡 WebSocket Events
+Client → Server
+join_room { token }
+place_bet { amount }
+cash_out {}
+Server → Client
+round_waiting { countdown }
+round_started { round_id }
+multiplier_tick { value }
+player_cashout { username, multiplier }
+round_crashed { crash_at }
+bet_result { profit, new_balance }
+📁 Project Structure
+aviotor/
+│
+├── Backend/
+│ ├── config/
+│ ├── routes/
+│ ├── sockets/
+│ ├── controllers/
+│ └── models/
+│
+├── Frontend/
+│ ├── src/
+│ │ ├── components/
+│ │ ├── pages/
+│ │ └── App.jsx
+│
+├── docker-compose.yml
+├── dockerfile
+├── package.json
+└── README.md
+⚙️ Environment Variables
+Backend .env
+MONGO_URI=your_mongodb_connection
+JWT_SECRET=your_secret_key
+PORT=3000
+Frontend .env
+VITE_API_URL=http://localhost:3000
+🐳 Docker Setup
+Build & Run
+docker compose up --build
+Run in Background
+docker compose up --build -d
+☁️ AWS Deployment
 
-## 🚀 Tech Stack
+The application is deployed on:
 
-### Frontend
-- **React (Vite)**: Modern SPA framework.
-- **Redux Toolkit**: Centralized state for auth and game data.
-- **Framer Motion**: Smooth aircraft animations and multiplier transitions.
-- **Tailwind CSS**: Utility-first styling for a technical, dark-mode aesthetic.
-- **Socket.io-client**: Real-time event consumption.
+AWS EC2 (Ubuntu)
+Docker containers
+MongoDB Atlas cloud database
+🔒 Security Features
+JWT Authentication
+Protected APIs
+Secure WebSocket connections
+Environment variable protection
+MongoDB Atlas IP access control
+🧪 Future Improvements
+Redis scaling
+Admin analytics dashboard
+Provably fair crash verification
+Kubernetes deployment
+CI/CD pipeline
+HTTPS + custom domain
+Unit & integration tests
+👨‍💻 Author
 
-### Backend
-- **Node.js & Express**: API and middleware.
-- **Socket.io**: Persistent WebSocket connections with JWT auth.
-- **Sequelize ORM**: Database modeling and migrations.
-- **JWT**: Secure user authentication.
-- **Crypto (Node.js)**: Provably fair random logic.
+Rahul Yadav
 
-## 🛠️ Local Setup
+📜 License
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Configure Environment**
-   Create a `.env` file from `.env.example`:
-   ```env
-   JWT_SECRET="your_secret_key"
-   NODE_ENV="development"
-   PORT=3000
-   ```
-
-3. **Run in Development**
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:3000`.
-
-## ☁️ AWS Deployment Guide
-
-### 1. EC2 Backend Setup
-- Launch an EC2 instance (Ubuntu 22.04).
-- Install Node.js, Docker, and Nginx.
-- Clone the repository.
-- Use **PM2** to manage the Node.js process: `pm2 start server.ts --interpreter tsx`.
-
-### 2. RDS (MySQL)
-- Create a MySQL RDS instance.
-- Update `server/config/database.ts` to use `mysql2` dialect and provide RDS credentials.
-
-### 3. S3 & CloudFront (Optional for Static Assets)
-- For extreme scale, build the frontend (`npm run build`) and upload `dist/` to an S3 bucket configured for static hosting.
-- Set up CloudFront with the S3 bucket as origin.
-
-### 4. Nginx Reverse Proxy
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-}
-```
-
-## 🔐 Provably Fair Calculation
-
-1. A `server_seed` is generated on round start.
-2. An `id` is assigned to the round.
-3. `HashedValue = hmac_sha256(server_seed, id)`.
-4. The first 8 characters of the hash are converted to a decimal `X` (0 to 1).
-5. `CrashPoint = 0.99 / (1 - X)`.
-6. This ensures the house only has a 1% edge and the outcome is predetermined and verifiable.
-
-## 📡 WebSocket Events
-
-### Client -> Server
-- `join_room { token }`: Authenticate and join the game room.
-- `place_bet { amount }`: Place a bet for the next round.
-- `cash_out {}`: Cash out at the current multiplier.
-
-### Server -> Client
-- `round_waiting { countdown }`: Countdown to the next flight.
-- `round_started { round_id }`: Airplane takes off.
-- `multiplier_tick { multiplier }`: Current multiplier value.
-- `round_crashed { crash_at }`: Game over event.
-- `player_bet { username, amount }`: Notify others of a new bet.
-- `player_cashout { username, multiplier, profit }`: Notify others of a win.
+This project was built as a Full Stack Developer assignment and is intended for educational and portfolio purposes.

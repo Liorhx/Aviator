@@ -26,34 +26,46 @@ export default function RegisterPage() {
   return (
     <div className="flex justify-center items-center h-[80vh]">
       <div className="w-full max-w-md bg-[#1a1a1a] p-8 rounded-2xl shadow-2xl border border-red-500/20">
-        <h2 className="text-3xl font-bold mb-6 text-center text-red-500 italic">AVIATOR</h2>
-        {error && <p className="bg-red-500/10 text-red-500 p-3 rounded mb-4 text-sm">{error}</p>}
+        <h2 className="text-3xl font-bold mb-6 text-center text-red-500 italic">
+          REGISTER
+        </h2>
+        {error && (
+          <p className="bg-red-500/10 text-red-500 p-3 rounded mb-4 text-sm">
+            {error}
+          </p>
+        )}
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-gray-400 text-xs uppercase mb-1">Username</label>
-            <input 
-              type="text" 
-              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500" 
+            <label className="block text-gray-400 text-xs uppercase mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs uppercase mb-1">Email</label>
-            <input 
-              type="email" 
-              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500" 
+            <label className="block text-gray-400 text-xs uppercase mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs uppercase mb-1">Password</label>
-            <input 
-              type="password" 
-              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500" 
+            <label className="block text-gray-400 text-xs uppercase mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -64,7 +76,13 @@ export default function RegisterPage() {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
-          Already have an account? <Link to="/login" className="text-red-500 hover:text-red-400 transition-colors cursor-pointer">Login</Link>
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+          >
+            Login
+          </Link>
         </p>
       </div>
     </div>

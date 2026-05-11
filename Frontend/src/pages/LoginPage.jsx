@@ -3,8 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { authApi } from "../services/api.js";
 import { setAuth } from "../redux/store.js";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,17 +49,27 @@ export default function LoginPage() {
               required
             />
           </div>
-          <div>
+
+          <div className="relative">
             <label className="block text-gray-400 text-xs uppercase mb-1">
               Password
             </label>
+
             <input
-              type="password"
-              className="w-full bg-[#262626] border border-gray-700 p-3 rounded-lg focus:outline-none focus:border-red-500"
+              type={showPassword ? "text" : "password"}
+              className="w-full bg-[#262626] border border-gray-700 p-3 pr-12 rounded-lg focus:outline-none focus:border-red-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-gray-400 hover:text-white"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
           <button className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all cursor-pointer active:scale-[0.98]">
             LOGIN

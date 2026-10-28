@@ -14,6 +14,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import mongoose from "mongoose";
 import { setupGameSocket } from "./server/sockets/gameSocket.js";
 import authRoutes from "./server/routes/authRoutes.js";
 import gameRoutes from "./server/routes/gameRoutes.js";
@@ -69,24 +70,33 @@ connectDB().catch((err) => {
   console.warn("Initial DB connection attempt failed:", err.message);
 });
 
-// Middleware to ensure DB connection is active for API requests
+// Middleware to ensure DB connection is active for state-altering API requests
 app.use(async (req, res, next) => {
-  if (req.path === "/api/health") return next();
+  // Allow health check and history without blocking on connection error
+  if (req.path === "/api/health" || req.path === "/api/game/history") return next();
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error("Database connection error on request:", err.message);
     res.status(503).json({
-      message: "Database connection unavailable. Please check MONGODB_URI.",
+      message: "Database connection unavailable. Please verify MONGODB_URI.",
     });
   }
 });
 
 // Health check endpoint for Render monitoring & uptime verification
 app.get("/api/health", (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const states = ["disconnected", "connected", "connecting", "disconnecting"];
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI || "";
+  const maskedUri = uri ? uri.replace(/:([^:@]+)@/, ":****@") : "using localhost default";
+
   res.json({
-    status: "ok",
+    status: dbState === 1 ? "ok" : "degraded",
+    database: states[dbState] || "unknown",
+    hasMongoUri: !!(process.env.MONGODB_URI || process.env.MONGO_URI),
+    mongoHost: maskedUri,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });

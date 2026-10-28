@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import {
   setGameState,
   addHistory,
@@ -112,32 +111,6 @@ export default function GamePage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#050508] text-white">
-      {/* Guest Notification Banner */}
-      {!isAuthenticated && (
-        <div className="bg-gradient-to-r from-red-950/60 via-purple-950/50 to-red-950/60 border-b border-red-500/20 px-4 py-1.5 flex items-center justify-between text-xs z-30 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-gray-300 font-medium text-[11px] sm:text-xs">
-              <strong className="text-white">Spectator Mode:</strong> You're watching the live round. Login to place bets and cash out!
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/login"
-              className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-red-400 hover:text-white px-2.5 py-1 rounded-md transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-md transition-colors shadow-md shadow-red-600/30"
-            >
-              Register
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar: Live Bets - Hidden on tablets and below for more room */}
         <aside className="w-64 bg-[#08080e] border-r border-gray-800 flex flex-col hidden xl:flex shrink-0">

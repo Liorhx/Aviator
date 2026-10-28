@@ -18,7 +18,47 @@ export class GameEngine {
     this.crashPoint = 1.0;
     this.tickInterval = null;
     this.serverSeed = crypto.randomBytes(32).toString("hex");
+    this.roundCount = 0;
+    this.idleRounds = 0;
+    this.isSleeping = false;
+
     this.startWaiting();
+  }
+
+  // Wake up game engine if sleeping when a user joins
+  resume() {
+    if (this.isSleeping) {
+      console.log("Player joined. Waking up Game Engine from sleep mode...");
+      this.isSleeping = false;
+      this.idleRounds = 0;
+      this.startWaiting();
+    }
+  }
+
+  // Auto-prune old records to keep MongoDB free tier usage below 10MB indefinitely
+  async cleanOldRounds() {
+    try {
+      // Find the cutoff date of the 100th latest round
+      const cutoff = await Round.find()
+        .sort({ createdAt: -1 })
+        .skip(100)
+        .limit(1)
+        .select("createdAt");
+
+      if (cutoff && cutoff.length > 0) {
+        const cutoffDate = cutoff[0].createdAt;
+        // Delete all rounds and bets older than the cutoff
+        const deletedRounds = await Round.deleteMany({ createdAt: { $lt: cutoffDate } });
+        const deletedBets = await Bet.deleteMany({ createdAt: { $lt: cutoffDate } });
+        if (deletedRounds.deletedCount > 0) {
+          console.log(
+            `Pruned ${deletedRounds.deletedCount} old rounds & ${deletedBets.deletedCount} bets to preserve MongoDB free tier.`
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("Storage auto-clean warning:", err.message);
+    }
   }
 
   async startWaiting() {
@@ -26,6 +66,12 @@ export class GameEngine {
     this.multiplier = 1.0;
     this.countdown = 5;
     this.bets = [];
+    this.roundCount++;
+
+    // Periodically prune historical rounds every 10 rounds to prevent storage growth
+    if (this.roundCount % 10 === 0) {
+      this.cleanOldRounds();
+    }
 
     this.io.emit("round_waiting_start", { countdown: this.countdown });
 
@@ -33,10 +79,14 @@ export class GameEngine {
     const { crashPoint, seed } = this.generateProvablyFairCrash();
     this.crashPoint = crashPoint;
 
-    const round = await Round.create({ crashPoint, seed });
-    this.currentRoundId = round._id.toString();
-
-    console.log(`New Round ID: ${this.currentRoundId}, Crash at: ${this.crashPoint}`);
+    try {
+      const round = await Round.create({ crashPoint, seed });
+      this.currentRoundId = round._id.toString();
+      console.log(`New Round ID: ${this.currentRoundId}, Crash at: ${this.crashPoint}`);
+    } catch (err) {
+      console.warn("Could not save round to DB:", err.message);
+      this.currentRoundId = new Date().getTime().toString();
+    }
 
     const interval = setInterval(() => {
       this.countdown -= 1;
@@ -56,10 +106,12 @@ export class GameEngine {
     let elapsed = 0;
     this.tickInterval = setInterval(() => {
       elapsed += 100;
-      // Exponential growth: 1.05 ^ (t in seconds)
+      // Exponential growth curve: 1.06 ^ (t in seconds)
       this.multiplier = Math.pow(1.06, elapsed / 1000);
-      
-      this.io.emit("multiplier_tick", { multiplier: parseFloat(this.multiplier.toFixed(2)) });
+
+      this.io.emit("multiplier_tick", {
+        multiplier: parseFloat(this.multiplier.toFixed(2)),
+      });
 
       if (this.multiplier >= this.crashPoint) {
         this.crash();
@@ -71,11 +123,34 @@ export class GameEngine {
     if (this.tickInterval) clearInterval(this.tickInterval);
     this.state = GameState.CRASHED;
 
-    await Round.findByIdAndUpdate(this.currentRoundId, { endTime: new Date() });
+    try {
+      if (this.currentRoundId && this.currentRoundId.length === 24) {
+        await Round.findByIdAndUpdate(this.currentRoundId, { endTime: new Date() });
+      }
+    } catch (err) {
+      console.warn("Round update warning:", err.message);
+    }
 
-    this.io.emit("round_crashed", { crashAt: parseFloat(this.crashPoint.toFixed(2)) });
+    this.io.emit("round_crashed", {
+      crashAt: parseFloat(this.crashPoint.toFixed(2)),
+    });
 
+    // Check if there are active clients connected
     setTimeout(() => {
+      const activeClients = this.io.engine?.clientsCount || 0;
+
+      // If nobody is on the site for 2 consecutive rounds, pause the loop to save database writes & bandwidth
+      if (activeClients === 0) {
+        this.idleRounds = (this.idleRounds || 0) + 1;
+        if (this.idleRounds >= 2) {
+          console.log("No active clients connected. Game loop sleeping to preserve MongoDB free tier.");
+          this.isSleeping = true;
+          return;
+        }
+      } else {
+        this.idleRounds = 0;
+      }
+
       this.startWaiting();
     }, 3000);
   }
@@ -86,13 +161,11 @@ export class GameEngine {
     hmac.update(seed);
     const hash = hmac.digest("hex");
 
-    // Logic: use first 8 chars of hash to get a number
+    // Use first 8 characters of hash
     const bigInt = BigInt(`0x${hash.substring(0, 8)}`);
     const val = Number(bigInt % 10000n) / 10000;
 
-    // Crash point calculation
-    // House edge: 1%
-    // Formula: 0.99 / (1 - X)
+    // Formula with 1% house edge: 0.99 / (1 - X)
     let crashPoint = 0.99 / (1 - val);
     crashPoint = Math.max(1.0, parseFloat(crashPoint.toFixed(2)));
 
@@ -120,7 +193,13 @@ export class GameEngine {
       betIndex,
     });
 
-    this.bets.unshift({ userId, username: user.username, amount, isCashout: false, betIndex });
+    this.bets.unshift({
+      userId,
+      username: user.username,
+      amount,
+      isCashout: false,
+      betIndex,
+    });
 
     return { bet, newBalance: user.balance };
   }
@@ -131,10 +210,10 @@ export class GameEngine {
     }
 
     const bet = await Bet.findOne({
-      userId, 
+      userId,
       roundId: this.currentRoundId,
       betIndex,
-      cashoutMultiplier: { $exists: false }
+      cashoutMultiplier: { $exists: false },
     });
 
     if (!bet) throw new Error("No active bet found");
@@ -145,7 +224,9 @@ export class GameEngine {
     await bet.save();
 
     // Update in-memory bet record
-    const memoryBet = this.bets.find(b => b.userId === userId && (b.betIndex || 0) === betIndex);
+    const memoryBet = this.bets.find(
+      (b) => b.userId === userId && (b.betIndex || 0) === betIndex
+    );
     if (memoryBet) {
       memoryBet.isCashout = true;
       memoryBet.multiplier = this.multiplier;
@@ -156,7 +237,12 @@ export class GameEngine {
     if (user) {
       user.balance += profit;
       await user.save();
-      return { profit, newBalance: user.balance, multiplier: this.multiplier, amount: bet.amount };
+      return {
+        profit,
+        newBalance: user.balance,
+        multiplier: this.multiplier,
+        amount: bet.amount,
+      };
     }
     throw new Error("User not found");
   }

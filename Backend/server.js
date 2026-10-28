@@ -23,14 +23,30 @@ import { connectDB } from "./server/config/database.js";
 const app = express();
 const httpServer = createServer(app);
 
-const allowedOrigins = process.env.FRONTEND_URL && process.env.FRONTEND_URL !== "*"
-  ? [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"]
-  : "*";
+// Dynamic CORS resolver to seamlessly support Vercel preview domains, production domains, and localhost with credentials
+const corsOriginResolver = (origin, callback) => {
+  if (!origin) return callback(null, true);
+
+  if (process.env.FRONTEND_URL && process.env.FRONTEND_URL !== "*") {
+    const allowed = process.env.FRONTEND_URL.split(",").map((u) => u.trim());
+    if (
+      allowed.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1")
+    ) {
+      return callback(null, true);
+    }
+  }
+
+  // Allow all origins by echoing back the origin (required for credentials: true)
+  return callback(null, true);
+};
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    origin: corsOriginResolver,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   },
   transports: ["websocket", "polling"],
@@ -40,8 +56,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: corsOriginResolver,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
@@ -65,7 +83,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Health check endpoint for uptime monitoring & Vercel verification
+// Health check endpoint for Render monitoring & uptime verification
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -93,12 +111,12 @@ app.get("*", (req, res) => {
   const indexPath = path.join(publicPath, "index.html");
   res.sendFile(indexPath, (err) => {
     if (err) {
-      res.status(200).send("Aviator API & Socket Server is running.");
+      res.status(200).send("Aviator API & Socket Server is running on Render.");
     }
   });
 });
 
-// Listen on port if not running in a serverless environment
+// Start listening on Render or local environment
 if (process.env.VERCEL !== "1") {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

@@ -1,8 +1,8 @@
 import axios from "axios";
 
-// Clean and normalize API base URL
+// Clean and normalize API base URL (strips trailing slash or duplicate /api)
 const rawApiUrl = import.meta.env.VITE_API_URL || "";
-const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+const cleanApiUrl = rawApiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
 const baseURL = cleanApiUrl ? `${cleanApiUrl}/api` : "/api";
 
 const API = axios.create({ baseURL });

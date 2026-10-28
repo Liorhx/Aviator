@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
+const getJwtSecret = () => process.env.JWT_SECRET || "default_secret";
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -11,7 +11,7 @@ export const authenticateToken = (req, res, next) => {
     return;
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, getJwtSecret(), (err, user) => {
     if (err) {
       res.status(403).json({ message: "Invalid token" });
       return;

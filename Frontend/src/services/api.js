@@ -1,7 +1,11 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
-const API = axios.create({ baseURL: `${API_URL}/api` });
+// Clean and normalize API base URL
+const rawApiUrl = import.meta.env.VITE_API_URL || "";
+const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+const baseURL = cleanApiUrl ? `${cleanApiUrl}/api` : "/api";
+
+const API = axios.create({ baseURL });
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

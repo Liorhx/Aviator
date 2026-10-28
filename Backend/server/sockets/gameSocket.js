@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { GameEngine } from "../services/gameEngine.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
+const getJwtSecret = () => process.env.JWT_SECRET || "default_secret";
 
 let gameEngine;
 
@@ -14,7 +14,7 @@ export const setupGameSocket = (io) => {
     socket.on("join_room", (data) => {
       const { token } = data;
       if (token) {
-        jwt.verify(token, JWT_SECRET, (err, user) => {
+        jwt.verify(token, getJwtSecret(), (err, user) => {
           if (!err) {
             socket.data.user = user;
             console.log(`User ${user.username} authenticated on socket.`);

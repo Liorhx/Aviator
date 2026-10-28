@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/Models.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
+const getJwtSecret = () => process.env.JWT_SECRET || "default_secret";
 
 export const register = async (req, res) => {
   try {
@@ -18,7 +18,7 @@ export const register = async (req, res) => {
     const user = await User.create({ username, email, password: hashedPassword, role });
     const userObj = user;
 
-    const token = jwt.sign({ id: userObj._id, username: userObj.username, role: userObj.role }, JWT_SECRET);
+    const token = jwt.sign({ id: userObj._id, username: userObj.username, role: userObj.role }, getJwtSecret());
     res.status(201).json({ token, user: { id: userObj._id, username: userObj.username, balance: userObj.balance, role: userObj.role } });
   } catch (error) {
     res.status(500).json({ message: "Registration failed", error });
@@ -40,7 +40,7 @@ export const login = async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET);
+    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, getJwtSecret());
     res.json({ token, user: { id: user._id, username: user.username, balance: user.balance, role: user.role } });
   } catch (error) {
     res.status(500).json({ message: "Login failed", error });

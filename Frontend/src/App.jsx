@@ -8,14 +8,13 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 
-function PrivateRoute({ children }) {
-  const { isAuthenticated } = useSelector((state) => state.auth);
-  return isAuthenticated ? <React.Fragment>{children}</React.Fragment> : <Navigate to="/login" />;
-}
-
 function AdminRoute({ children }) {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  return isAuthenticated && user?.role === "admin" ? <React.Fragment>{children}</React.Fragment> : <Navigate to="/" />;
+  return isAuthenticated && user?.role === "admin" ? (
+    <React.Fragment>{children}</React.Fragment>
+  ) : (
+    <Navigate to="/" />
+  );
 }
 
 export default function App() {
@@ -25,24 +24,33 @@ export default function App() {
         <div className="min-h-screen bg-[#050508] text-white font-sans flex flex-col overflow-hidden">
           <Navbar />
           <Routes>
-            <Route path="/login" element={<div className="container mx-auto p-4"><LoginPage /></div>} />
-            <Route path="/register" element={<div className="container mx-auto p-4"><RegisterPage /></div>} />
-            <Route 
-              path="/" 
+            {/* Main game page is public: visitors can watch live and are prompted to login only when placing a bet */}
+            <Route path="/" element={<GamePage />} />
+            <Route
+              path="/login"
               element={
-                <PrivateRoute>
-                  <GamePage />
-                </PrivateRoute>
-              } 
+                <div className="container mx-auto p-4 flex-1 flex items-center justify-center">
+                  <LoginPage />
+                </div>
+              }
             />
-            <Route 
-              path="/admin" 
+            <Route
+              path="/register"
+              element={
+                <div className="container mx-auto p-4 flex-1 flex items-center justify-center">
+                  <RegisterPage />
+                </div>
+              }
+            />
+            <Route
+              path="/admin"
               element={
                 <AdminRoute>
                   <AdminPage />
                 </AdminRoute>
-              } 
+              }
             />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>

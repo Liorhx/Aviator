@@ -1,62 +1,109 @@
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from Backend/.env or root ../.env
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
-import dotenv from "dotenv";
 import { setupGameSocket } from "./server/sockets/gameSocket.js";
 import authRoutes from "./server/routes/authRoutes.js";
 import gameRoutes from "./server/routes/gameRoutes.js";
 import adminRoutes from "./server/routes/adminRoutes.js";
 import { connectDB } from "./server/config/database.js";
 
-dotenv.config();
+const app = express();
+const httpServer = createServer(app);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const allowedOrigins = process.env.FRONTEND_URL && process.env.FRONTEND_URL !== "*"
+  ? [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"]
+  : "*";
 
-async function startServer() {
-  const app = express();
-  const httpServer = createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+app.use(express.json());
+
+// Database Connection on startup
+connectDB().catch((err) => {
+  console.warn("Initial DB connection attempt failed:", err.message);
+});
+
+// Middleware to ensure DB connection is active for API requests
+app.use(async (req, res, next) => {
+  if (req.path === "/api/health") return next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("Database connection error on request:", err.message);
+    res.status(503).json({
+      message: "Database connection unavailable. Please check MONGODB_URI.",
+    });
+  }
+});
+
+// Health check endpoint for uptime monitoring & Vercel verification
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
   });
+});
 
-  const PORT = process.env.PORT || 3000;
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/game", gameRoutes);
+app.use("/api/admin", adminRoutes);
 
-  app.use(cors());
-  app.use(express.json());
+// Socket Setup
+setupGameSocket(io);
 
-  // Database Connection
-  await connectDB();
+// Serve Static Files (Frontend Build when running combined)
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
 
-  // Routes
-  app.use("/api/auth", authRoutes);
-  app.use("/api/game", gameRoutes);
-  app.use("/api/admin", adminRoutes);
-
-  // Socket Setup
-  setupGameSocket(io);
-
-  // Serve Static Files (Frontend Build)
-  const publicPath = path.join(process.cwd(), "public");
-  app.use(express.static(publicPath));
-
-  app.get("*", (req, res) => {
-    // Check if it's an API request first (avoid catching API routes with index.html)
-    if (req.path.startsWith("/api/")) {
-      return res.status(404).json({ message: "API route not found" });
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ message: "API route not found" });
+  }
+  const indexPath = path.join(publicPath, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(200).send("Aviator API & Socket Server is running.");
     }
-    res.sendFile(path.join(publicPath, "index.html"));
   });
+});
 
+// Listen on port if not running in a serverless environment
+if (process.env.VERCEL !== "1") {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+export { app, httpServer, io };
+export default app;

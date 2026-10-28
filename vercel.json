@@ -8,6 +8,7 @@
     "backend": {
       "root": "Backend",
       "framework": "express",
+      "entrypoint": "server.js",
       "bindings": [
         {
           "type": "service",
@@ -21,6 +22,12 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/socket.io/(.*)",
       "destination": {
         "service": "backend"
       }

@@ -19,7 +19,7 @@ import { setupGameSocket } from "./server/sockets/gameSocket.js";
 import authRoutes from "./server/routes/authRoutes.js";
 import gameRoutes from "./server/routes/gameRoutes.js";
 import adminRoutes from "./server/routes/adminRoutes.js";
-import { connectDB } from "./server/config/database.js";
+import { connectDB, getMongoUri } from "./server/config/database.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -89,14 +89,27 @@ app.use(async (req, res, next) => {
 app.get("/api/health", (req, res) => {
   const dbState = mongoose.connection.readyState;
   const states = ["disconnected", "connected", "connecting", "disconnecting"];
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URI || "";
-  const maskedUri = uri ? uri.replace(/:([^:@]+)@/, ":****@") : "using localhost default";
+  const uri = getMongoUri();
+  const maskedUri = uri ? uri.replace(/:([^:@]+)@/, ":****@") : "none";
+  const isCloudUri = Boolean(uri && !uri.includes("localhost"));
+
+  // Check which key is present in Render's environment
+  const detectedKey = Object.keys(process.env).find((k) =>
+    /^(mongodb_uri|mongo_uri|database_url|mongo_url|mongodb_url)$/i.test(k.trim())
+  );
+
+  // List all relevant environment keys present on Render (values hidden)
+  const relevantKeys = Object.keys(process.env).filter((k) =>
+    /mongo|database|jwt|port|node_env|frontend/i.test(k)
+  );
 
   res.json({
     status: dbState === 1 ? "ok" : "degraded",
     database: states[dbState] || "unknown",
-    hasMongoUri: !!(process.env.MONGODB_URI || process.env.MONGO_URI),
+    hasMongoUri: isCloudUri,
+    detectedEnvKey: detectedKey || null,
     mongoHost: maskedUri,
+    appEnvironmentKeysFoundOnRender: relevantKeys,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });

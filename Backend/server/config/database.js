@@ -13,17 +13,38 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 let isConnected = false;
 
+// Universal helper to find MongoDB connection string regardless of naming convention
+export const getMongoUri = () => {
+  // Check exact standard environment variable names
+  if (process.env.MONGODB_URI?.trim()) return process.env.MONGODB_URI.trim();
+  if (process.env.MONGO_URI?.trim()) return process.env.MONGO_URI.trim();
+  if (process.env.DATABASE_URL?.trim()) return process.env.DATABASE_URL.trim();
+  if (process.env.MONGO_URL?.trim()) return process.env.MONGO_URL.trim();
+  if (process.env.MONGODB_URL?.trim()) return process.env.MONGODB_URL.trim();
+
+  // Case-insensitive and whitespace-tolerant search across all process.env keys
+  for (const key of Object.keys(process.env)) {
+    const cleanKey = key.trim().toLowerCase();
+    const val = process.env[key]?.trim();
+    if (
+      (cleanKey.includes("mongo") || cleanKey.includes("database")) &&
+      val &&
+      (val.startsWith("mongodb://") || val.startsWith("mongodb+srv://"))
+    ) {
+      return val;
+    }
+  }
+
+  return "mongodb://localhost:27017/crash-game";
+};
+
 export const connectDB = async () => {
   if (isConnected || mongoose.connection.readyState >= 1) {
     isConnected = true;
     return;
   }
 
-  const uri =
-    process.env.MONGODB_URI ||
-    process.env.MONGO_URI ||
-    "mongodb://localhost:27017/crash-game";
-
+  const uri = getMongoUri();
   const maskedUri = uri.replace(/:([^:@]+)@/, ":****@");
   console.log("Connecting to MongoDB URI:", maskedUri);
 

@@ -1,14 +1,18 @@
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from Backend/.env or root ../.env
+// Load environment variables from Backend/.env, root ../.env, or Render Secret Files
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+if (fs.existsSync("/etc/secrets/.env")) {
+  dotenv.config({ path: "/etc/secrets/.env" });
+}
 
 import express from "express";
 import { createServer } from "http";

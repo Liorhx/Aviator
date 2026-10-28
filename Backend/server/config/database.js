@@ -1,15 +1,19 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure env variables are loaded from Backend or root
+// Ensure env variables are loaded from Backend, root, or Render Secret Files
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+if (fs.existsSync("/etc/secrets/.env")) {
+  dotenv.config({ path: "/etc/secrets/.env" });
+}
 
 let isConnected = false;
 
@@ -21,6 +25,20 @@ export const getMongoUri = () => {
   if (process.env.DATABASE_URL?.trim()) return process.env.DATABASE_URL.trim();
   if (process.env.MONGO_URL?.trim()) return process.env.MONGO_URL.trim();
   if (process.env.MONGODB_URL?.trim()) return process.env.MONGODB_URL.trim();
+
+  // Check if Render Secret Files were used (mounted at /etc/secrets/)
+  try {
+    if (fs.existsSync("/etc/secrets/MONGODB_URI")) {
+      const val = fs.readFileSync("/etc/secrets/MONGODB_URI", "utf8").trim();
+      if (val) return val;
+    }
+    if (fs.existsSync("/etc/secrets/MONGO_URI")) {
+      const val = fs.readFileSync("/etc/secrets/MONGO_URI", "utf8").trim();
+      if (val) return val;
+    }
+  } catch (e) {
+    // ignore read error
+  }
 
   // Case-insensitive and whitespace-tolerant search across all process.env keys
   for (const key of Object.keys(process.env)) {
